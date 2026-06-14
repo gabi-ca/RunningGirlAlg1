@@ -1,92 +1,431 @@
-import pygame
-import sys
+import pygame    #biblioteca principal do jogo
+import sys       #para lidar com o fechamento da janela
+import random    #para gerar obstáculos de forma aleatória
+import os        #para trabalhar com arquivos e pastas, caminhos do sistema
 
-# Inicialização do Pygame
+'''Inicialização do Pygame'''
 pygame.init()
 
-# Configurações da Tela
+'''Configurações da Tela'''
 LARGURA = 800
 ALTURA = 400
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Running Girl!")
 
-# Cores
+'''Geometria do chão'''
+ALTURA_GRAMA = 15
+ALTURA_SOLO = 48
+ALTURA_CHAO_TOTAL = ALTURA_GRAMA + ALTURA_SOLO
+PISO = ALTURA - ALTURA_CHAO_TOTAL
+ALTURA_AGUA = 10
+
+'''Cores básicas'''
 BRANCO = (255, 255, 255)
+PRETO = (0, 0, 0)
 AZULCEU = (91, 163, 252)
-VERMELHO = (255, 0, 0)
-AZUL = (0, 0, 255)
 VERDECHAO = (37, 227, 36)
+SOLO_MARROM = (101, 67, 33)
+AGUA_AZUL = (60, 140, 230)
 
+'''Paleta do castelo (reino encantado)'''
+CASTELO_LILAS = (180, 160, 220)
+CASTELO_LILAS_ESC = (140, 120, 180)
+CASTELO_TELHADO = (230, 140, 190)
+BANDEIRA_VERMELHA = (230, 70, 90)
 
-# Variáveis do Jogador
-jogador_tam = 40                    #tamanho do quadrado do jogador
-jogador_x = 100                     #posição horizontal fixa do jogador
-jogador_y = ALTURA - jogador_tam    #posição vertical inicial do jogador (no chão)
-jogador_y_velocidade = 0            #velocidade vertical do jogador (inicialmente 0)
+'''Posição do castelo único ao fundo'''
+CASTELO_X = 250
+CASTELO_Y_BASE = PISO - 110
+
+'''Paleta das árvores'''
+TRONCO_MARROM = (120, 80, 50)
+TRONCO_MARROM_ESC = (90, 58, 35)
+COPA_VERDE_CLARO = (90, 200, 90)
+COPA_VERDE_ESCURO = (50, 150, 60)
+
+'''Paleta dos obstáculos'''
+ESPINHO_ROXO = (160, 40, 200)
+ESPINHO_ROXO_ESC = (110, 20, 150)
+CAIXA_MARROM = (139, 94, 60)
+CAIXA_MARROM_ESC = (94, 60, 38)
+CAIXA_DETALHE = (210, 170, 110)
+CORRENTE_CINZA = (120, 120, 130)
+FAIXA_DOURADA = (230, 190, 90)
+FAIXA_DOURADA_ESC = (190, 150, 60)
+
+'''Fontes'''
+fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28)
+fonte_titulo = pygame.font.Font("fontefofa.ttf", 48)
+fonte_texto = pygame.font.Font("fontefofa.ttf", 24)
+fonte_velocidade = pygame.font.Font("fontefofa.ttf", 18)
+
+'''Sprite do jogador (de pé e agachado)'''
+CAMINHO_BASE = os.path.dirname(os.path.abspath(__file__))
+sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).convert_alpha()
+
+SPRITE_TAM = 60
+sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))
+sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))
+
+'''Geometria do obstáculo "faixa" (estandarte pendurado, só passa agachando)'''
+FAIXA_ALTURA = 28
+FAIXA_LARGURA = 46
+FAIXA_Y = (PISO - (SPRITE_TAM // 2) + 2) - 4 - FAIXA_ALTURA
+
+'''Overlay escuro usado na tela de Game Over'''
+overlay_game_over = pygame.Surface((LARGURA, ALTURA))
+overlay_game_over.set_alpha(150)
+overlay_game_over.fill(PRETO)
+
+'''Variáveis do Jogador'''
+jogador_x = 100             # posição horizontal fixa do jogador
 gravidade = 1.0
-esta_no_chao = True
+PULO_FORCA = -15
 
-# Variáveis dos Obstáculos (Espinhos)
-espinho_x = LARGURA                  #posição horizontal inicial do espinho (fora da tela)
-espinho_y = ALTURA - 30              #posição vertical do espinho
-espinho_largura = 30                 #largura do espinho  (tbm definem o hitbox do espinho)
-espinho_altura = 30                  #altura do espinho   (colisão do espinho)
-velocidade_jogo = 8                  #velocidade de movimento do jogo (60fps: 8 pixels por frame = 480 pixels por segundo)
+'''Configuração da dificuldade progressiva'''
+VELOCIDADE_INICIAL = 5.0
+VELOCIDADE_MAX = 16.0
+INCREMENTO_POR_FAIXA = 0.5
+FAIXA_PONTOS = 1000
 
-# Controle de FPS
-relogio = pygame.time.Clock()        #relogio para controlar a taxa de quadros do jogo (60 FPS)
+'''Margem para evitar que obstáculos de chão e trechos de água surjam sobrepostos'''
+MARGEM_SEGURANCA = 60
 
-# Loop Principal do Jogo
-while True:
+'''Distância extra somada ao próximo obstáculo de chão logo após um trecho de água'''
+EXTRA_APOS_AGUA = 80
+
+'''Controle de FPS'''
+relogio = pygame.time.Clock()
+
+
+def hitbox_jogador():
+    #de pé: inset de 6px no sprite (acompanha melhor o contorno do personagem);
+    #agachado: metade da altura, rente ao chão
+    if esta_agachado:
+        return pygame.Rect(jogador_x + 6, PISO - (SPRITE_TAM // 2) + 3, SPRITE_TAM - 12, (SPRITE_TAM // 2) - 6)
+    return pygame.Rect(jogador_x + 6, int(jogador_y) + 6, SPRITE_TAM - 12, SPRITE_TAM - 12)
+
+
+def hitbox_obstaculo(obs):
+    #caixas de colisão menores que o retângulo de desenho, acompanhando a
+    #forma visível de cada obstáculo (o espinho é um triângulo, por exemplo)
+    x, y = int(obs["x"]), obs["y"]
+    largura, altura = obs["largura"], obs["altura"]
+    if obs["tipo"] == "espinho":
+        return pygame.Rect(x + 5, y + 10, largura - 10, altura - 10)
+    elif obs["tipo"] == "bloco":
+        return pygame.Rect(x + 2, y + 2, largura - 4, altura - 4)
+    else:  # faixa
+        return pygame.Rect(x + 2, y + 2, largura - 4, altura - 8)
+
+
+def desenhar_jogador():
+    if esta_agachado:
+        tela.blit(sprite_jogador_agachado, (jogador_x, PISO - SPRITE_TAM // 2))
+    else:
+        tela.blit(sprite_jogador, (jogador_x, int(jogador_y)))
+
+
+def gerar_obstaculo(x):
+    tipo = random.choice(["espinho", "bloco", "faixa"])
+    if tipo == "espinho":
+        return {"tipo": tipo, "x": float(x), "y": PISO - 30, "largura": 30, "altura": 30}
+    elif tipo == "bloco":
+        return {"tipo": tipo, "x": float(x), "y": PISO - 60, "largura": 36, "altura": 60}
+    else:  # faixa: estandarte pendurado na altura do tronco do jogador, só passa agachando
+        return {"tipo": tipo, "x": float(x), "y": FAIXA_Y, "largura": FAIXA_LARGURA, "altura": FAIXA_ALTURA}
+
+
+def desenhar_obstaculo(obs):
+    x, y = int(obs["x"]), obs["y"]
+    largura, altura = obs["largura"], obs["altura"]
+
+    if obs["tipo"] == "espinho":
+        pygame.draw.polygon(tela, ESPINHO_ROXO_ESC, [
+            (x - 2, y + altura), (x + largura / 2, y - 2), (x + largura + 2, y + altura)
+        ])
+        pygame.draw.polygon(tela, ESPINHO_ROXO, [
+            (x, y + altura), (x + largura / 2, y), (x + largura, y + altura)
+        ])
+
+    elif obs["tipo"] == "bloco":
+        pygame.draw.rect(tela, CAIXA_MARROM_ESC, (x, y, largura, altura))
+        pygame.draw.rect(tela, CAIXA_MARROM, (x + 3, y + 3, largura - 6, altura - 6))
+        pygame.draw.line(tela, CAIXA_MARROM_ESC, (x + 3, y + 3), (x + largura - 3, y + altura - 3), 3)
+        pygame.draw.line(tela, CAIXA_MARROM_ESC, (x + largura - 3, y + 3), (x + 3, y + altura - 3), 3)
+        for canto in [(x + 5, y + 5), (x + largura - 5, y + 5), (x + 5, y + altura - 5), (x + largura - 5, y + altura - 5)]:
+            pygame.draw.circle(tela, CAIXA_DETALHE, canto, 2)
+
+    else:  # faixa: estandarte pendurado por correntes - só passa agachando
+        for cx in (x + 6, x + largura - 6):
+            for cy in range(0, y, 6):
+                pygame.draw.circle(tela, CORRENTE_CINZA, (cx, cy + 3), 2)
+        pygame.draw.rect(tela, FAIXA_DOURADA, (x, y, largura, altura - 6))
+        pygame.draw.rect(tela, FAIXA_DOURADA_ESC, (x, y, largura, 4))
+        pygame.draw.polygon(tela, FAIXA_DOURADA, [
+            (x, y + altura - 6), (x + largura, y + altura - 6), (x + largura // 2, y + altura)
+        ])
+        cx_centro, cy_centro = x + largura // 2, y + altura // 2 - 2
+        pygame.draw.polygon(tela, CASTELO_TELHADO, [
+            (cx_centro, cy_centro - 5), (cx_centro + 6, cy_centro),
+            (cx_centro, cy_centro + 5), (cx_centro - 6, cy_centro)
+        ])
+
+
+def calcular_gap(velocidade):
+    fator = velocidade / VELOCIDADE_INICIAL
+    return int(300 * fator), int(500 * fator)
+
+
+def calcular_gap_agua(velocidade):
+    fator = velocidade / VELOCIDADE_INICIAL
+    return int(800 * fator), int(1250 * fator)
+
+
+def atualizar_velocidade(pontos):
+    incrementos = pontos // FAIXA_PONTOS
+    return min(VELOCIDADE_INICIAL + incrementos * INCREMENTO_POR_FAIXA, VELOCIDADE_MAX)
+
+
+def desenhar_camada_repetida(desenhar_tile, offset, tile_largura, y_base):
+    x = -offset
+    while x < LARGURA:
+        desenhar_tile(x, y_base)
+        x += tile_largura
+
+
+def desenhar_tile_castelo(x, y_base):
+    # torres laterais com telhado cônico e bandeira
+    for tx in (x + 20, x + 220):
+        pygame.draw.rect(tela, CASTELO_LILAS, (tx, y_base, 30, 110))
+        pygame.draw.rect(tela, CASTELO_LILAS_ESC, (tx + 24, y_base, 6, 110))
+        pygame.draw.polygon(tela, CASTELO_TELHADO, [(tx - 5, y_base), (tx + 15, y_base - 25), (tx + 35, y_base)])
+        pygame.draw.line(tela, BANDEIRA_VERMELHA, (tx + 15, y_base - 25), (tx + 15, y_base - 35), 2)
+        pygame.draw.polygon(tela, BANDEIRA_VERMELHA, [(tx + 15, y_base - 35), (tx + 28, y_base - 31), (tx + 15, y_base - 27)])
+
+    # torre central
+    pygame.draw.rect(tela, CASTELO_LILAS, (x + 110, y_base + 10, 60, 100))
+    pygame.draw.polygon(tela, CASTELO_TELHADO, [(x + 105, y_base + 10), (x + 140, y_base - 20), (x + 175, y_base + 10)])
+    pygame.draw.line(tela, BANDEIRA_VERMELHA, (x + 140, y_base - 20), (x + 140, y_base - 32), 2)
+    pygame.draw.polygon(tela, BANDEIRA_VERMELHA, [(x + 140, y_base - 32), (x + 154, y_base - 28), (x + 140, y_base - 24)])
+
+    # janelas
+    for wx in (x + 122, x + 150):
+        pygame.draw.rect(tela, CASTELO_LILAS_ESC, (wx, y_base + 40, 8, 12))
+
+
+def desenhar_tile_arvore(x, y_base):
+    cx = x + 100
+    pygame.draw.rect(tela, TRONCO_MARROM, (cx - 10, y_base - 40, 20, 40))
+    pygame.draw.rect(tela, TRONCO_MARROM_ESC, (cx + 6, y_base - 40, 4, 40))
+
+    pygame.draw.rect(tela, COPA_VERDE_ESCURO, (cx - 30, y_base - 70, 60, 25))
+    pygame.draw.rect(tela, COPA_VERDE_CLARO, (cx - 22, y_base - 78, 44, 25))
+    pygame.draw.rect(tela, COPA_VERDE_ESCURO, (cx - 15, y_base - 95, 30, 22))
+
+
+def desenhar_segmentos_agua():
+    for seg in segmentos_agua:
+        x, largura = int(seg["x"]), int(seg["largura"])
+        pygame.draw.rect(tela, AZULCEU, (x, PISO, largura, ALTURA_CHAO_TOTAL))
+        pygame.draw.rect(tela, AGUA_AZUL, (x, ALTURA - ALTURA_AGUA, largura, ALTURA_AGUA))
+
+
+def desenhar_fundo():
     tela.fill(AZULCEU)
+    desenhar_tile_castelo(CASTELO_X, CASTELO_Y_BASE)
+    desenhar_camada_repetida(desenhar_tile_arvore, scroll_arvores, 200, PISO)
+    pygame.draw.rect(tela, VERDECHAO, (0, PISO, LARGURA, ALTURA_GRAMA))
+    pygame.draw.rect(tela, SOLO_MARROM, (0, PISO + ALTURA_GRAMA, LARGURA, ALTURA_SOLO))
+    desenhar_segmentos_agua()
 
-    # Eventos (Pulo e Fechamento)
-    for evento in pygame.event.get():    #verifica os eventos do jogo (teclado, mouse, etc.)
-        if evento.type == pygame.QUIT:   #se o jogador clicar no "X" da janela, o jogo é fechado
+
+def desenhar_pontuacao():
+    texto_sombra = fonte_pontuacao.render(f"Pontos: {int(pontuacao)}", True, PRETO)
+    tela.blit(texto_sombra, (11, 11))
+    texto = fonte_pontuacao.render(f"Pontos: {int(pontuacao)}", True, BRANCO)
+    tela.blit(texto, (10, 10))
+
+    vel_sombra = fonte_velocidade.render(f"Velocidade: {velocidade_jogo:.1f}", True, PRETO)
+    tela.blit(vel_sombra, (11, 45))
+    vel_texto = fonte_velocidade.render(f"Velocidade: {velocidade_jogo:.1f}", True, BRANCO)
+    tela.blit(vel_texto, (10, 44))
+
+
+def desenhar_tela_inicio():
+    desenhar_fundo()
+    tela.blit(overlay_game_over, (0, 0))
+
+    titulo = fonte_titulo.render("Running Girl!", True, BRANCO)
+    tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 100)))
+
+    inicio_msg = fonte_texto.render("Pressione ESPAÇO para começar", True, BRANCO)
+    tela.blit(inicio_msg, inicio_msg.get_rect(center=(LARGURA // 2, ALTURA // 2 - 50)))
+
+    linhas = [
+        "ESPAÇO: pular espinhos e caixas",
+        "ESPAÇO (2x no ar): salto duplo para atravessar a água",
+        "SETA BAIXO / S: agachar para passar sob o estandarte",
+    ]
+    for i, linha in enumerate(linhas):
+        texto = fonte_texto.render(linha, True, BRANCO)
+        tela.blit(texto, texto.get_rect(center=(LARGURA // 2, ALTURA // 2 + i * 30)))
+
+
+def desenhar_tela_game_over():
+    tela.blit(overlay_game_over, (0, 0))
+
+    titulo = fonte_titulo.render("GAME OVER", True, BRANCO)
+    tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 40)))
+
+    pontos = fonte_texto.render(f"Pontuação final: {int(pontuacao)}", True, BRANCO)
+    tela.blit(pontos, pontos.get_rect(center=(LARGURA // 2, ALTURA // 2 + 10)))
+
+    instrucao = fonte_texto.render("Pressione R para reiniciar", True, BRANCO)
+    tela.blit(instrucao, instrucao.get_rect(center=(LARGURA // 2, ALTURA // 2 + 45)))
+
+
+def reiniciar_jogo():
+    global jogador_y, jogador_y_velocidade, esta_no_chao, esta_agachado, pulo_duplo_usado
+    global obstaculos, distancia_proximo_obstaculo
+    global segmentos_agua, distancia_proximo_agua
+    global velocidade_jogo, pontuacao
+    global scroll_arvores
+    global estado_jogo
+
+    jogador_y = float(PISO - SPRITE_TAM)
+    jogador_y_velocidade = 0.0
+    esta_no_chao = True
+    esta_agachado = False
+    pulo_duplo_usado = False
+
+    obstaculos = []
+    distancia_proximo_obstaculo = 400
+
+    segmentos_agua = []
+    distancia_proximo_agua = 700
+
+    velocidade_jogo = VELOCIDADE_INICIAL
+    pontuacao = 0.0
+
+    scroll_arvores = 0.0
+
+    estado_jogo = "jogando"
+
+
+'''Inicialização do estado do jogo'''
+reiniciar_jogo()
+estado_jogo = "inicio"
+
+'''Loop Principal do Jogo'''
+while True:
+    '''Eventos (Pulo, Reinício e Fechamento)'''
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         if evento.type == pygame.KEYDOWN:
-            if evento.key == pygame.K_SPACE and esta_no_chao:
-                jogador_y_velocidade = -15
-                esta_no_chao = False
+            if estado_jogo == "inicio":
+                if evento.key == pygame.K_SPACE:
+                    reiniciar_jogo()
+            elif estado_jogo == "jogando":
+                if evento.key == pygame.K_SPACE and not esta_agachado:
+                    if esta_no_chao:
+                        jogador_y_velocidade = PULO_FORCA
+                        esta_no_chao = False
+                        pulo_duplo_usado = False
+                    elif not pulo_duplo_usado:
+                        jogador_y_velocidade = PULO_FORCA
+                        pulo_duplo_usado = True
+            elif estado_jogo == "game_over":
+                if evento.key == pygame.K_r:
+                    reiniciar_jogo()
 
-    # Lógica do Jogador (Gravidade)
-    jogador_y_velocidade += gravidade         #aplica a gravidade à velocidade vertical do jogador
-    jogador_y += jogador_y_velocidade         #atualiza a posição vertical do jogador com base na velocidade
-    if jogador_y >= ALTURA - jogador_tam:     #se o jogador atingir ou ultrapassar o chão, ele é reposicionado no chão
-        jogador_y = ALTURA - jogador_tam      #e a velocidade é zerada para evitar que o jogador continue caindo
-        jogador_y_velocidade = 0
-        esta_no_chao = True
-    espinhos = [
-    {"x": 800},
-    {"x": 1100},
-    {"x": 1400}
-    ]
-    
-    # Lógica dos Obstáculos
-    espinho_x -= velocidade_jogo                            #move o espinho para a esquerda com base na velocidade do jogo
-    if espinho_x < -espinho_largura:                        #se o espinho sair completamente da tela
-        espinho_x = LARGURA                                 #ele volta para o início da tela
+    if estado_jogo == "jogando":
+        '''Agachar: seta para baixo ou tecla S, só funciona no chão'''
+        teclas = pygame.key.get_pressed()
+        esta_agachado = (teclas[pygame.K_DOWN] or teclas[pygame.K_s]) and esta_no_chao
 
-    # Colisões
-    jogador_rect = pygame.Rect(jogador_x, jogador_y, jogador_tam, jogador_tam)
-    espinho_rect = pygame.Rect(espinho_x, espinho_y, espinho_largura, espinho_altura)
+        '''Lógica do Jogador (Gravidade)'''
+        jogador_y_velocidade += gravidade
+        jogador_y += jogador_y_velocidade
+        if jogador_y >= PISO - SPRITE_TAM:
+            jogador_y = PISO - SPRITE_TAM
+            jogador_y_velocidade = 0
+            esta_no_chao = True
+            pulo_duplo_usado = False
 
-    if jogador_rect.colliderect(espinho_rect):
-        print("Game Over!")                     #reinicia a posição do espinho para não travar
-        espinho_x = LARGURA 
+        '''Lógica dos Obstáculos: move, remove os que saíram da tela e cria novos'''
+        for obs in obstaculos:
+            obs["x"] -= velocidade_jogo
+        obstaculos = [o for o in obstaculos if o["x"] + o["largura"] > 0]
 
-    # Desenhos na tela
-    pygame.draw.rect(tela, AZUL, jogador_rect)                       #jogador
-    pygame.draw.polygon(tela, VERMELHO, [
-        (espinho_x, espinho_y + espinho_altura), 
-        (espinho_x + espinho_largura / 2, espinho_y), 
-        (espinho_x + espinho_largura, espinho_y + espinho_altura)
-    ])                                                               #espinho
-    
-    # Chão
-    pygame.draw.line(tela, VERDECHAO, (5, ALTURA), (LARGURA, ALTURA), 5) 
+        distancia_proximo_obstaculo -= velocidade_jogo
+        if distancia_proximo_obstaculo <= 0:
+            sobrepoe_agua = any(
+                s["x"] < LARGURA + MARGEM_SEGURANCA and s["x"] + s["largura"] > LARGURA - MARGEM_SEGURANCA
+                for s in segmentos_agua
+            )
+            if sobrepoe_agua:
+                distancia_proximo_obstaculo = MARGEM_SEGURANCA
+            else:
+                obstaculos.append(gerar_obstaculo(LARGURA))
+                gap_min, gap_max = calcular_gap(velocidade_jogo)
+                distancia_proximo_obstaculo = random.randint(gap_min, gap_max)
 
-    # Atualiza a tela e define taxa de quadros
+        '''Lógica dos segmentos de água: move, remove os que saíram da tela e cria novos'''
+        for seg in segmentos_agua:
+            seg["x"] -= velocidade_jogo
+        segmentos_agua = [s for s in segmentos_agua if s["x"] + s["largura"] > 0]
+
+        distancia_proximo_agua -= velocidade_jogo
+        if distancia_proximo_agua <= 0:
+            sobrepoe_obstaculo = any(
+                o["x"] < LARGURA + MARGEM_SEGURANCA and o["x"] + o["largura"] > LARGURA - MARGEM_SEGURANCA
+                for o in obstaculos
+            )
+            if sobrepoe_obstaculo:
+                distancia_proximo_agua = MARGEM_SEGURANCA
+            else:
+                largura_agua = velocidade_jogo * random.uniform(38, 46)
+                segmentos_agua.append({"x": float(LARGURA), "largura": largura_agua})
+                gap_min, gap_max = calcular_gap_agua(velocidade_jogo)
+                distancia_proximo_agua = random.randint(gap_min, gap_max)
+                # Garante que o próximo obstáculo de chão não surja muito perto da água
+                distancia_proximo_obstaculo += EXTRA_APOS_AGUA
+
+        '''Pontuação e dificuldade progressiva'''
+        pontuacao += velocidade_jogo
+        velocidade_jogo = atualizar_velocidade(pontuacao)
+
+        '''Rolagem do cenário (paralaxe)'''
+        scroll_arvores = (scroll_arvores + velocidade_jogo * 0.5) % 200
+
+        '''Colisões'''
+        jogador_rect = hitbox_jogador()
+        for obs in obstaculos:
+            if jogador_rect.colliderect(hitbox_obstaculo(obs)):
+                estado_jogo = "game_over"
+
+        # Colisão com a água: só afunda se não estiver alto o suficiente no ar
+        if (jogador_y + SPRITE_TAM) >= PISO:
+            for seg in segmentos_agua:
+                if jogador_rect.right > seg["x"] and jogador_rect.left < seg["x"] + seg["largura"]:
+                    estado_jogo = "game_over"
+
+    '''Desenhos na tela'''
+    if estado_jogo == "inicio":
+        desenhar_tela_inicio()
+    else:
+        desenhar_fundo()
+        for obs in obstaculos:
+            desenhar_obstaculo(obs)
+        desenhar_jogador()
+        desenhar_pontuacao()
+
+        if estado_jogo == "game_over":
+            desenhar_tela_game_over()
+
+    '''Atualiza a tela e define taxa de quadros'''
     pygame.display.flip()
     relogio.tick(60)
