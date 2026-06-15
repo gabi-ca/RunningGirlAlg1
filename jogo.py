@@ -33,9 +33,9 @@ CASTELO_LILAS_ESC = (140, 120, 180)
 CASTELO_TELHADO = (230, 140, 190)
 BANDEIRA_VERMELHA = (230, 70, 90)
 
-'''Posição do castelo único ao fundo'''
-CASTELO_X = 250
+'''Posição dos castelos ao fundo (camada repetida em paralaxe)'''
 CASTELO_Y_BASE = PISO - 110
+CASTELO_TILE_LARGURA = 200
 
 '''Paleta das árvores'''
 TRONCO_MARROM = (120, 80, 50)
@@ -233,7 +233,7 @@ def desenhar_segmentos_agua():
 
 def desenhar_fundo():
     tela.fill(AZULCEU)
-    desenhar_tile_castelo(CASTELO_X, CASTELO_Y_BASE)
+    desenhar_camada_repetida(desenhar_tile_castelo, scroll_castelos, CASTELO_TILE_LARGURA, CASTELO_Y_BASE)
     desenhar_camada_repetida(desenhar_tile_arvore, scroll_arvores, 200, PISO)
     pygame.draw.rect(tela, VERDECHAO, (0, PISO, LARGURA, ALTURA_GRAMA))
     pygame.draw.rect(tela, SOLO_MARROM, (0, PISO + ALTURA_GRAMA, LARGURA, ALTURA_SOLO))
@@ -291,6 +291,7 @@ def reiniciar_jogo():
     global segmentos_agua, distancia_proximo_agua
     global velocidade_jogo, pontuacao
     global scroll_arvores
+    global scroll_castelos
     global estado_jogo
 
     jogador_y = float(PISO - SPRITE_TAM)
@@ -309,6 +310,7 @@ def reiniciar_jogo():
     pontuacao = 0.0
 
     scroll_arvores = 0.0
+    scroll_castelos = 0.0
 
     estado_jogo = "jogando"
 
@@ -400,6 +402,7 @@ while True:
 
         '''Rolagem do cenário (paralaxe)'''
         scroll_arvores = (scroll_arvores + velocidade_jogo * 0.5) % 200
+        scroll_castelos = (scroll_castelos + velocidade_jogo * 0.2) % CASTELO_TILE_LARGURA
 
         '''Colisões'''
         jogador_rect = hitbox_jogador()
