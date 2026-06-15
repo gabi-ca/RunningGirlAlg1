@@ -49,9 +49,10 @@ ESPINHO_ROXO_ESC = (110, 20, 150)
 CAIXA_MARROM = (139, 94, 60)
 CAIXA_MARROM_ESC = (94, 60, 38)
 CAIXA_DETALHE = (210, 170, 110)
-CORRENTE_CINZA = (120, 120, 130)
-FAIXA_DOURADA = (230, 190, 90)
-FAIXA_DOURADA_ESC = (190, 150, 60)
+PASSARINHO_CORPO = (250, 140, 70)
+PASSARINHO_CORPO_ESC = (200, 95, 40)
+PASSARINHO_BARRIGA = (255, 230, 180)
+PASSARINHO_BICO = (255, 210, 50)
 
 '''Fontes'''
 fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28)
@@ -67,10 +68,10 @@ SPRITE_TAM = 60
 sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))
 sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))
 
-'''Geometria do obstáculo "faixa" (estandarte pendurado, só passa agachando)'''
-FAIXA_ALTURA = 28
-FAIXA_LARGURA = 46
-FAIXA_Y = (PISO - (SPRITE_TAM // 2) + 2) - 4 - FAIXA_ALTURA
+'''Geometria do obstáculo "passarinho" (pode ser evitado agachando ou pulando)'''
+PASSARINHO_ALTURA = 24
+PASSARINHO_LARGURA = 36
+PASSARINHO_Y = PISO - 56
 
 '''Overlay escuro usado na tela de Game Over'''
 overlay_game_over = pygame.Surface((LARGURA, ALTURA))
@@ -115,8 +116,8 @@ def hitbox_obstaculo(obs):
         return pygame.Rect(x + 5, y + 10, largura - 10, altura - 10)
     elif obs["tipo"] == "bloco":
         return pygame.Rect(x + 2, y + 2, largura - 4, altura - 4)
-    else:  # faixa
-        return pygame.Rect(x + 2, y + 2, largura - 4, altura - 8)
+    else:  # passarinho
+        return pygame.Rect(x + 4, y + 4, largura - 8, altura - 8)
 
 
 def desenhar_jogador():
@@ -127,13 +128,13 @@ def desenhar_jogador():
 
 
 def gerar_obstaculo(x):
-    tipo = random.choice(["espinho", "bloco", "faixa"])
+    tipo = random.choice(["espinho", "bloco", "passarinho"])
     if tipo == "espinho":
         return {"tipo": tipo, "x": float(x), "y": PISO - 30, "largura": 30, "altura": 30}
     elif tipo == "bloco":
         return {"tipo": tipo, "x": float(x), "y": PISO - 60, "largura": 36, "altura": 60}
-    else:  # faixa: estandarte pendurado na altura do tronco do jogador, só passa agachando
-        return {"tipo": tipo, "x": float(x), "y": FAIXA_Y, "largura": FAIXA_LARGURA, "altura": FAIXA_ALTURA}
+    else:  # passarinho: voa na altura do tronco do jogador, pode ser evitado agachando ou pulando
+        return {"tipo": tipo, "x": float(x), "y": PASSARINHO_Y, "largura": PASSARINHO_LARGURA, "altura": PASSARINHO_ALTURA}
 
 
 def desenhar_obstaculo(obs):
@@ -156,20 +157,33 @@ def desenhar_obstaculo(obs):
         for canto in [(x + 5, y + 5), (x + largura - 5, y + 5), (x + 5, y + altura - 5), (x + largura - 5, y + altura - 5)]:
             pygame.draw.circle(tela, CAIXA_DETALHE, canto, 2)
 
-    else:  # faixa: estandarte pendurado por correntes - só passa agachando
-        for cx in (x + 6, x + largura - 6):
-            for cy in range(0, y, 6):
-                pygame.draw.circle(tela, CORRENTE_CINZA, (cx, cy + 3), 2)
-        pygame.draw.rect(tela, FAIXA_DOURADA, (x, y, largura, altura - 6))
-        pygame.draw.rect(tela, FAIXA_DOURADA_ESC, (x, y, largura, 4))
-        pygame.draw.polygon(tela, FAIXA_DOURADA, [
-            (x, y + altura - 6), (x + largura, y + altura - 6), (x + largura // 2, y + altura)
+    else:  # passarinho: ave em pixel art - pode ser evitada agachando ou pulando
+        cy = y + altura // 2
+
+        # cauda (penas traseiras, lado direito - sentido do voo)
+        pygame.draw.polygon(tela, PASSARINHO_CORPO_ESC, [
+            (x + largura - 8, y + 6), (x + largura, y + 2), (x + largura, y + 14), (x + largura - 8, y + altura - 4)
         ])
-        cx_centro, cy_centro = x + largura // 2, y + altura // 2 - 2
-        pygame.draw.polygon(tela, CASTELO_TELHADO, [
-            (cx_centro, cy_centro - 5), (cx_centro + 6, cy_centro),
-            (cx_centro, cy_centro + 5), (cx_centro - 6, cy_centro)
+
+        # corpo (sombra por baixo, corpo claro por cima, peito)
+        pygame.draw.ellipse(tela, PASSARINHO_CORPO_ESC, (x + 8, y + 6, largura - 12, altura - 6))
+        pygame.draw.ellipse(tela, PASSARINHO_CORPO, (x + 6, y + 4, largura - 12, altura - 8))
+        pygame.draw.ellipse(tela, PASSARINHO_BARRIGA, (x + 10, cy, largura - 20, altura // 2 - 2))
+
+        # asa batendo (alterna posição para dar sensação de voo)
+        if (pygame.time.get_ticks() // 100) % 2 == 0:
+            pontos_asa = [(x + 14, y + 8), (x + 24, y), (x + 24, y + 10)]
+        else:
+            pontos_asa = [(x + 14, y + 10), (x + 24, y + 14), (x + 24, y + altura)]
+        pygame.draw.polygon(tela, PASSARINHO_CORPO_ESC, pontos_asa)
+
+        # bico apontando para a frente do voo (esquerda)
+        pygame.draw.polygon(tela, PASSARINHO_BICO, [
+            (x + 6, cy - 3), (x + 6, cy + 3), (x - 2, cy)
         ])
+
+        # olho
+        pygame.draw.circle(tela, PRETO, (x + 12, cy - 2), 2)
 
 
 def calcular_gap(velocidade):
@@ -265,7 +279,7 @@ def desenhar_tela_inicio():
     linhas = [
         "ESPAÇO: pular espinhos e caixas",
         "ESPAÇO (2x no ar): salto duplo para atravessar a água",
-        "SETA BAIXO / S: agachar para passar sob o estandarte",
+        "SETA BAIXO / S ou ESPAÇO: agache ou pule para evitar o passarinho",
     ]
     for i, linha in enumerate(linhas):
         texto = fonte_texto.render(linha, True, BRANCO)
