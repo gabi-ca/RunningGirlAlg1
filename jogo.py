@@ -366,10 +366,15 @@ while True:
         jogador_y_velocidade += gravidade
         jogador_y += jogador_y_velocidade
         if jogador_y >= PISO - SPRITE_TAM:
-            jogador_y = PISO - SPRITE_TAM
-            jogador_y_velocidade = 0
-            esta_no_chao = True
-            pulo_duplo_usado = False
+            sobre_agua = any(
+                seg["x"] < jogador_x + SPRITE_TAM and seg["x"] + seg["largura"] > jogador_x
+                for seg in segmentos_agua
+            )
+            if not sobre_agua:
+                jogador_y = PISO - SPRITE_TAM
+                jogador_y_velocidade = 0
+                esta_no_chao = True
+                pulo_duplo_usado = False
 
         '''Lógica dos Obstáculos: move, remove os que saíram da tela e cria novos'''
         for obs in obstaculos:
@@ -424,8 +429,8 @@ while True:
             if jogador_rect.colliderect(hitbox_obstaculo(obs)):
                 estado_jogo = "game_over"
 
-        # Colisão com a água: só afunda se não estiver alto o suficiente no ar
-        if (jogador_y + SPRITE_TAM) >= PISO:
+        # Colisão com a água: game over apenas ao tocar a faixa azul na base da tela
+        if jogador_rect.bottom >= ALTURA - ALTURA_AGUA:
             for seg in segmentos_agua:
                 if jogador_rect.right > seg["x"] and jogador_rect.left < seg["x"] + seg["largura"]:
                     estado_jogo = "game_over"
