@@ -1,7 +1,7 @@
-import pygame    #biblioteca principal do jogo
-import sys       #para lidar com o fechamento da janela
-import random    #para gerar obstáculos de forma aleatória
-import os        #para trabalhar com arquivos e pastas, caminhos do sistema
+import pygame    #biblioteca principal do jogo (motor grafico)
+import sys       #para lida com funções do sistema
+import random    #para gerar números aleatórios (obstáculos e espaçamento)
+import os        #para trabalhar com caminhos de arquivos do sistema
 
 '''Inicialização do Pygame'''
 pygame.init()
@@ -55,15 +55,14 @@ PASSARINHO_BARRIGA = (255, 230, 180)
 PASSARINHO_BICO = (255, 210, 50)
 
 '''Fontes'''
-fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28)
+fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28) 
 fonte_titulo = pygame.font.Font("fontefofa.ttf", 48)
-fonte_texto = pygame.font.Font("fontefofa.ttf", 24)
+fonte_texto = pygame.font.Font("fontefofa.ttf", 20)
 fonte_velocidade = pygame.font.Font("fontefofa.ttf", 18)
 
 '''Sprite do jogador (de pé e agachado)'''
 CAMINHO_BASE = os.path.dirname(os.path.abspath(__file__))
 sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).convert_alpha()
-
 SPRITE_TAM = 60
 sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))
 sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))
@@ -79,13 +78,13 @@ overlay_game_over.set_alpha(150)
 overlay_game_over.fill(PRETO)
 
 '''Variáveis do Jogador'''
-jogador_x = 100             # posição horizontal fixa do jogador
+jogador_x = 100
 gravidade = 1.0
 PULO_FORCA = -15
 
 '''Configuração da dificuldade progressiva'''
 VELOCIDADE_INICIAL = 5.0
-VELOCIDADE_MAX = 16.0
+VELOCIDADE_MAX = 20.0
 INCREMENTO_POR_FAIXA = 0.5
 FAIXA_PONTOS = 1000
 
@@ -100,18 +99,15 @@ relogio = pygame.time.Clock()
 
 
 def hitbox_jogador():
-    #de pé: inset de 6px no sprite (acompanha melhor o contorno do personagem);
-    #agachado: metade da altura, rente ao chão
-    if esta_agachado:
-        return pygame.Rect(jogador_x + 6, PISO - (SPRITE_TAM // 2) + 3, SPRITE_TAM - 12, (SPRITE_TAM // 2) - 6)
-    return pygame.Rect(jogador_x + 6, int(jogador_y) + 6, SPRITE_TAM - 12, SPRITE_TAM - 12)
+    if esta_agachado:                                                                                            #de pé: inset de 6px no sprite para acompanhar a forma visível do personagem;
+        return pygame.Rect(jogador_x + 6, PISO - (SPRITE_TAM // 2) + 3, SPRITE_TAM - 12, (SPRITE_TAM // 2) - 6)  #agachado: metade da altura, rente ao chão 
+    else:
+        return pygame.Rect(jogador_x + 6, int(jogador_y) + 6, SPRITE_TAM - 12, SPRITE_TAM - 12)
 
 
 def hitbox_obstaculo(obs):
-    #caixas de colisão menores que o retângulo de desenho, acompanhando a
-    #forma visível de cada obstáculo (o espinho é um triângulo, por exemplo)
-    x, y = int(obs["x"]), obs["y"]
-    largura, altura = obs["largura"], obs["altura"]
+    x, y = int(obs["x"]), obs["y"]                                    #caixas de colisão menores que o retângulo de desenho, acompanhando a
+    largura, altura = obs["largura"], obs["altura"]                    #forma visível de cada obstáculo (o espinho é um triângulo, por exemplo)
     if obs["tipo"] == "espinho":
         return pygame.Rect(x + 5, y + 10, largura - 10, altura - 10)
     elif obs["tipo"] == "bloco":
@@ -157,32 +153,32 @@ def desenhar_obstaculo(obs):
         for canto in [(x + 5, y + 5), (x + largura - 5, y + 5), (x + 5, y + altura - 5), (x + largura - 5, y + altura - 5)]:
             pygame.draw.circle(tela, CAIXA_DETALHE, canto, 2)
 
-    else:  # passarinho: ave em pixel art - pode ser evitada agachando ou pulando
+    else:  #passarinho: ave em pixel art - pode ser evitada agachando ou pulando
         cy = y + altura // 2
 
-        # cauda (penas traseiras, lado direito - sentido do voo)
+        #cauda (penas traseiras, lado direito - sentido do voo)
         pygame.draw.polygon(tela, PASSARINHO_CORPO_ESC, [
             (x + largura - 8, y + 6), (x + largura, y + 2), (x + largura, y + 14), (x + largura - 8, y + altura - 4)
         ])
 
-        # corpo (sombra por baixo, corpo claro por cima, peito)
+        #corpo (sombra por baixo, corpo claro por cima, peito)
         pygame.draw.ellipse(tela, PASSARINHO_CORPO_ESC, (x + 8, y + 6, largura - 12, altura - 6))
         pygame.draw.ellipse(tela, PASSARINHO_CORPO, (x + 6, y + 4, largura - 12, altura - 8))
         pygame.draw.ellipse(tela, PASSARINHO_BARRIGA, (x + 10, cy, largura - 20, altura // 2 - 2))
 
-        # asa batendo (alterna posição para dar sensação de voo)
+        #asa batendo (alterna posição para dar sensação de voo)
         if (pygame.time.get_ticks() // 100) % 2 == 0:
             pontos_asa = [(x + 14, y + 8), (x + 24, y), (x + 24, y + 10)]
         else:
             pontos_asa = [(x + 14, y + 10), (x + 24, y + 14), (x + 24, y + altura)]
         pygame.draw.polygon(tela, PASSARINHO_CORPO_ESC, pontos_asa)
 
-        # bico apontando para a frente do voo (esquerda)
+        #bico apontando para a frente do voo (esquerda)
         pygame.draw.polygon(tela, PASSARINHO_BICO, [
             (x + 6, cy - 3), (x + 6, cy + 3), (x - 2, cy)
         ])
 
-        # olho
+        #olho
         pygame.draw.circle(tela, PRETO, (x + 12, cy - 2), 2)
 
 
@@ -209,7 +205,7 @@ def desenhar_camada_repetida(desenhar_tile, offset, tile_largura, y_base):
 
 
 def desenhar_tile_castelo(x, y_base):
-    # torres laterais com telhado cônico e bandeira
+    #torres laterais com telhado cônico e bandeira
     for tx in (x + 20, x + 220):
         pygame.draw.rect(tela, CASTELO_LILAS, (tx, y_base, 30, 110))
         pygame.draw.rect(tela, CASTELO_LILAS_ESC, (tx + 24, y_base, 6, 110))
@@ -217,21 +213,21 @@ def desenhar_tile_castelo(x, y_base):
         pygame.draw.line(tela, BANDEIRA_VERMELHA, (tx + 15, y_base - 25), (tx + 15, y_base - 35), 2)
         pygame.draw.polygon(tela, BANDEIRA_VERMELHA, [(tx + 15, y_base - 35), (tx + 28, y_base - 31), (tx + 15, y_base - 27)])
 
-    # torre central
+    #torre central
     pygame.draw.rect(tela, CASTELO_LILAS, (x + 110, y_base + 10, 60, 100))
     pygame.draw.polygon(tela, CASTELO_TELHADO, [(x + 105, y_base + 10), (x + 140, y_base - 20), (x + 175, y_base + 10)])
     pygame.draw.line(tela, BANDEIRA_VERMELHA, (x + 140, y_base - 20), (x + 140, y_base - 32), 2)
     pygame.draw.polygon(tela, BANDEIRA_VERMELHA, [(x + 140, y_base - 32), (x + 154, y_base - 28), (x + 140, y_base - 24)])
 
-    # janelas
+    #janelas
     for wx in (x + 122, x + 150):
         pygame.draw.rect(tela, CASTELO_LILAS_ESC, (wx, y_base + 40, 8, 12))
 
 
 def desenhar_tile_arvore(x, y_base):
     cx = x + 100
-    pygame.draw.rect(tela, TRONCO_MARROM, (cx - 10, y_base - 40, 20, 40))
-    pygame.draw.rect(tela, TRONCO_MARROM_ESC, (cx + 6, y_base - 40, 4, 40))
+    pygame.draw.rect(tela, TRONCO_MARROM, (cx - 10, y_base - 45, 20, 45))
+    pygame.draw.rect(tela, TRONCO_MARROM_ESC, (cx + 6, y_base - 45, 4, 45))
 
     pygame.draw.rect(tela, COPA_VERDE_ESCURO, (cx - 30, y_base - 70, 60, 25))
     pygame.draw.rect(tela, COPA_VERDE_CLARO, (cx - 22, y_base - 78, 44, 25))
@@ -412,7 +408,7 @@ while True:
                 segmentos_agua.append({"x": float(LARGURA), "largura": largura_agua})
                 gap_min, gap_max = calcular_gap_agua(velocidade_jogo)
                 distancia_proximo_agua = random.randint(gap_min, gap_max)
-                # Garante que o próximo obstáculo de chão não surja muito perto da água
+                #Garante que o próximo obstáculo de chão não surja muito perto da água
                 distancia_proximo_obstaculo += EXTRA_APOS_AGUA
 
         '''Pontuação e dificuldade progressiva'''
