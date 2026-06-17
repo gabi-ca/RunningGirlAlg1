@@ -371,6 +371,8 @@ while True:
                 jogador_y_velocidade = 0
                 esta_no_chao = True
                 pulo_duplo_usado = False
+            else:
+                esta_no_chao = False
 
         '''Lógica dos Obstáculos: move, remove os que saíram da tela e cria novos'''
         for obs in obstaculos:
