@@ -11,6 +11,7 @@ LARGURA = 800
 ALTURA = 400
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Running Girl!")
+tela_cheia = False
 
 '''Geometria do chão'''
 ALTURA_GRAMA = 15
@@ -96,6 +97,15 @@ EXTRA_APOS_AGUA = 400
 
 '''Controle de FPS'''
 relogio = pygame.time.Clock()
+
+
+def alternar_tela_cheia():
+    global tela, tela_cheia
+    tela_cheia = not tela_cheia
+    if tela_cheia:
+        tela = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN | pygame.SCALED)
+    else:
+        tela = pygame.display.set_mode((LARGURA, ALTURA))
 
 
 def hitbox_jogador():
@@ -337,6 +347,8 @@ while True:
             pygame.quit()
             sys.exit()
         if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_f:
+                alternar_tela_cheia()
             if estado_jogo == "inicio":
                 if evento.key == pygame.K_SPACE:
                     reiniciar_jogo()
