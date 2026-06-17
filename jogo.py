@@ -86,13 +86,13 @@ PULO_FORCA = -15
 VELOCIDADE_INICIAL = 5.0
 VELOCIDADE_MAX = 20.0
 INCREMENTO_POR_FAIXA = 0.5
-FAIXA_PONTOS = 1000
+FAIXA_PONTOS = 1500
 
 '''Margem para evitar que obstáculos de chão e trechos de água surjam sobrepostos'''
-MARGEM_SEGURANCA = 60
+MARGEM_SEGURANCA = 200
 
 '''Distância extra somada ao próximo obstáculo de chão logo após um trecho de água'''
-EXTRA_APOS_AGUA = 80
+EXTRA_APOS_AGUA = 400
 
 '''Controle de FPS'''
 relogio = pygame.time.Clock()
