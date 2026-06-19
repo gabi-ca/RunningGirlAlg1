@@ -66,6 +66,9 @@ fonte_velocidade = pygame.font.Font("fontefofa.ttf", 18)
 '''Botão de tela cheia (coordenadas do espaço de jogo 800x400)'''
 RECT_BOTAO_TELA_CHEIA = pygame.Rect(LARGURA - 50, ALTURA - 50, 40, 40)
 
+'''Botão de pausa (canto superior direito)'''
+RECT_BOTAO_PAUSA = pygame.Rect(LARGURA - 50, 10, 40, 40)
+
 '''Sprite do jogador (de pé e agachado)'''
 CAMINHO_BASE = os.path.dirname(os.path.abspath(__file__))
 sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).convert_alpha()
@@ -76,6 +79,12 @@ sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, S
 '''Ícone do botão de tela cheia'''
 icone_tela_cheia = pygame.transform.scale(
     pygame.image.load(os.path.join(CAMINHO_BASE, "icone_tela_cheia.png")).convert_alpha(),
+    (40, 40)
+)
+
+'''Ícone do botão de pausa'''
+icone_pausa = pygame.transform.scale(
+    pygame.image.load(os.path.join(CAMINHO_BASE, "pausa.png")).convert_alpha(),
     (40, 40)
 )
 
@@ -131,6 +140,17 @@ def escalar_mouse_para_jogo(pos):
 
 def desenhar_botao_tela_cheia():
     tela.blit(icone_tela_cheia, RECT_BOTAO_TELA_CHEIA.topleft)
+
+
+def desenhar_botao_pausa():
+    tela.blit(icone_pausa, RECT_BOTAO_PAUSA.topleft)
+
+
+def desenhar_tela_pausa():
+    tela.blit(overlay_game_over, (0, 0))
+    texto = fonte_titulo.render("PAUSADO", True, BRANCO)
+    tela.blit(texto, texto.get_rect(center=(LARGURA // 2, ALTURA // 2)))
+    desenhar_botao_pausa()
 
 
 def hitbox_jogador():
@@ -380,12 +400,21 @@ while True:
             pygame.quit()
             sys.exit()
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            pos_jogo = escalar_mouse_para_jogo(evento.pos)
             if estado_jogo in ("inicio", "game_over"):
-                if RECT_BOTAO_TELA_CHEIA.collidepoint(escalar_mouse_para_jogo(evento.pos)):
+                if RECT_BOTAO_TELA_CHEIA.collidepoint(pos_jogo):
                     alternar_tela_cheia()
+            if estado_jogo in ("jogando", "pausado"):
+                if RECT_BOTAO_PAUSA.collidepoint(pos_jogo):
+                    estado_jogo = "pausado" if estado_jogo == "jogando" else "jogando"
         if evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_f, pygame.K_F11):
                 alternar_tela_cheia()
+            if evento.key in (pygame.K_p, pygame.K_ESCAPE):
+                if estado_jogo == "jogando":
+                    estado_jogo = "pausado"
+                elif estado_jogo == "pausado":
+                    estado_jogo = "jogando"
             if estado_jogo == "inicio":
                 if evento.key == pygame.K_SPACE:
                     reiniciar_jogo()
@@ -494,6 +523,10 @@ while True:
 
         if estado_jogo == "game_over":
             desenhar_tela_game_over()
+        elif estado_jogo == "pausado":
+            desenhar_tela_pausa()
+        else:
+            desenhar_botao_pausa()
 
     '''Atualiza a tela e define taxa de quadros'''
     if tela_cheia:
