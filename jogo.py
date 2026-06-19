@@ -9,7 +9,9 @@ pygame.init()
 '''Configurações da Tela'''
 LARGURA = 800
 ALTURA = 400
-tela = pygame.display.set_mode((LARGURA, ALTURA))
+display = pygame.display.set_mode((LARGURA, ALTURA))
+superficie_jogo = pygame.Surface((LARGURA, ALTURA))
+tela = superficie_jogo
 pygame.display.set_caption("Running Girl!")
 tela_cheia = False
 
@@ -56,10 +58,13 @@ PASSARINHO_BARRIGA = (255, 230, 180)
 PASSARINHO_BICO = (255, 210, 50)
 
 '''Fontes'''
-fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28) 
+fonte_pontuacao = pygame.font.Font("fontefofa.ttf", 28)
 fonte_titulo = pygame.font.Font("fontefofa.ttf", 48)
 fonte_texto = pygame.font.Font("fontefofa.ttf", 20)
 fonte_velocidade = pygame.font.Font("fontefofa.ttf", 18)
+
+'''Botão de tela cheia (coordenadas do espaço de jogo 800x400)'''
+RECT_BOTAO_TELA_CHEIA = pygame.Rect(LARGURA - 50, ALTURA - 50, 40, 40)
 
 '''Sprite do jogador (de pé e agachado)'''
 CAMINHO_BASE = os.path.dirname(os.path.abspath(__file__))
@@ -67,6 +72,12 @@ sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).co
 SPRITE_TAM = 60
 sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))
 sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))
+
+'''Ícone do botão de tela cheia'''
+icone_tela_cheia = pygame.transform.scale(
+    pygame.image.load(os.path.join(CAMINHO_BASE, "ícone_tela_cheia.png")).convert_alpha(),
+    (40, 40)
+)
 
 '''Geometria do obstáculo "passarinho" (pode ser evitado agachando ou pulando)'''
 PASSARINHO_ALTURA = 24
@@ -100,12 +111,26 @@ relogio = pygame.time.Clock()
 
 
 def alternar_tela_cheia():
-    global tela, tela_cheia
+    global display, tela_cheia
     tela_cheia = not tela_cheia
     if tela_cheia:
-        tela = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN | pygame.SCALED)
+        display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        pygame.event.set_grab(True)
     else:
-        tela = pygame.display.set_mode((LARGURA, ALTURA))
+        display = pygame.display.set_mode((LARGURA, ALTURA))
+        pygame.event.set_grab(False)
+
+
+def escalar_mouse_para_jogo(pos):
+    if tela_cheia:
+        escala_x = display.get_width() / LARGURA
+        escala_y = display.get_height() / ALTURA
+        return (pos[0] / escala_x, pos[1] / escala_y)
+    return pos
+
+
+def desenhar_botao_tela_cheia():
+    tela.blit(icone_tela_cheia, RECT_BOTAO_TELA_CHEIA.topleft)
 
 
 def hitbox_jogador():
@@ -286,10 +311,13 @@ def desenhar_tela_inicio():
         "ESPAÇO: pular espinhos e caixas",
         "ESPAÇO (2x no ar): salto duplo para atravessar a água",
         "SETA BAIXO / S ou ESPAÇO: agache ou pule para evitar o passarinho",
+        "F / F11: alternar tela cheia",
     ]
     for i, linha in enumerate(linhas):
         texto = fonte_texto.render(linha, True, BRANCO)
         tela.blit(texto, texto.get_rect(center=(LARGURA // 2, ALTURA // 2 + i * 30)))
+
+    desenhar_botao_tela_cheia()
 
 
 def desenhar_tela_game_over():
@@ -303,6 +331,11 @@ def desenhar_tela_game_over():
 
     instrucao = fonte_texto.render("Pressione R para reiniciar", True, BRANCO)
     tela.blit(instrucao, instrucao.get_rect(center=(LARGURA // 2, ALTURA // 2 + 45)))
+
+    tela_cheia_msg = fonte_texto.render("F / F11: alternar tela cheia", True, BRANCO)
+    tela.blit(tela_cheia_msg, tela_cheia_msg.get_rect(center=(LARGURA // 2, ALTURA // 2 + 80)))
+
+    desenhar_botao_tela_cheia()
 
 
 def reiniciar_jogo():
@@ -346,8 +379,12 @@ while True:
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            if estado_jogo in ("inicio", "game_over"):
+                if RECT_BOTAO_TELA_CHEIA.collidepoint(escalar_mouse_para_jogo(evento.pos)):
+                    alternar_tela_cheia()
         if evento.type == pygame.KEYDOWN:
-            if evento.key == pygame.K_f:
+            if evento.key in (pygame.K_f, pygame.K_F11):
                 alternar_tela_cheia()
             if estado_jogo == "inicio":
                 if evento.key == pygame.K_SPACE:
@@ -459,5 +496,9 @@ while True:
             desenhar_tela_game_over()
 
     '''Atualiza a tela e define taxa de quadros'''
+    if tela_cheia:
+        display.blit(pygame.transform.scale(superficie_jogo, display.get_size()), (0, 0))
+    else:
+        display.blit(superficie_jogo, (0, 0))
     pygame.display.flip()
     relogio.tick(60)
