@@ -75,7 +75,7 @@ sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, S
 
 '''Ícone do botão de tela cheia'''
 icone_tela_cheia = pygame.transform.scale(
-    pygame.image.load(os.path.join(CAMINHO_BASE, "ícone_tela_cheia.png")).convert_alpha(),
+    pygame.image.load(os.path.join(CAMINHO_BASE, "icone_tela_cheia.png")).convert_alpha(),
     (40, 40)
 )
 
