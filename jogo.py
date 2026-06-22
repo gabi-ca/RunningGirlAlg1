@@ -7,13 +7,13 @@ import os        #para trabalhar com caminhos de arquivos do sistema
 pygame.init()
 
 '''Configurações da Tela'''
-LARGURA = 800
-ALTURA = 400
-display = pygame.display.set_mode((LARGURA, ALTURA))
-superficie_jogo = pygame.Surface((LARGURA, ALTURA))
-tela = superficie_jogo
-pygame.display.set_caption("Running Girl!")
-tela_cheia = False
+LARGURA = 800                                         #usado para posicionamento e lógica do jogo
+ALTURA = 400                                          #usado para posicionamento e lógica do jogo
+display = pygame.display.set_mode((LARGURA, ALTURA))  #tela de exibição
+superficie_jogo = pygame.Surface((LARGURA, ALTURA))   #superfície de desenho do jogo (renderiza tudo aqui e depois escala para a tela)
+tela = superficie_jogo                                #referência de desenho
+pygame.display.set_caption("Running Girl!")           #título da janela
+tela_cheia = False                                    #controle de estado da tela cheia
 
 '''Geometria do chão'''
 ALTURA_GRAMA = 15
@@ -38,7 +38,7 @@ BANDEIRA_VERMELHA = (230, 70, 90)
 
 '''Posição dos castelos ao fundo (camada repetida em paralaxe)'''
 CASTELO_Y_BASE = PISO - 110
-CASTELO_TILE_LARGURA = 200
+CASTELO_TILE_LARGURA = 200    #usado para calcular o offset de rolagem e garantir que os tiles se encaixem perfeitamente ao repetir
 
 '''Paleta das árvores'''
 TRONCO_MARROM = (120, 80, 50)
@@ -63,40 +63,42 @@ fonte_titulo = pygame.font.Font("fontefofa.ttf", 48)
 fonte_texto = pygame.font.Font("fontefofa.ttf", 20)
 fonte_velocidade = pygame.font.Font("fontefofa.ttf", 18)
 
-'''Botão de tela cheia (coordenadas do espaço de jogo 800x400)'''
+'''Botão de tela cheia (canto inferior direito)'''
 RECT_BOTAO_TELA_CHEIA = pygame.Rect(LARGURA - 50, ALTURA - 50, 40, 40)
 
 '''Botão de pausa (canto superior direito)'''
 RECT_BOTAO_PAUSA = pygame.Rect(LARGURA - 50, 10, 40, 40)
 
-'''Sprite do jogador (de pé e agachado)'''
+'''garante que o caminho da imagem funcione mesmo se o jogo for executado a partir de outra pasta'''
 CAMINHO_BASE = os.path.dirname(os.path.abspath(__file__))
-sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).convert_alpha()
+
+'''Sprite do jogador (de pé e agachado)'''
+sprite_original = pygame.image.load(os.path.join(CAMINHO_BASE, "player.png")).convert_alpha()   #carrega o sprite original do jogador (com fundo transparente) para ser escalado para as versões de pé e agachado
 SPRITE_TAM = 60
-sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))
-sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))
+sprite_jogador = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM))   #sprite do jogador em pé
+sprite_jogador_agachado = pygame.transform.scale(sprite_original, (SPRITE_TAM, SPRITE_TAM // 2))   #sprite do jogador agachado
 
 '''Ícone do botão de tela cheia'''
 icone_tela_cheia = pygame.transform.scale(
     pygame.image.load(os.path.join(CAMINHO_BASE, "icone_tela_cheia.png")).convert_alpha(),
     (40, 40)
-)
+)   #carrega o ícone do botão de tela cheia (com fundo transparente) e escala para o tamanho do botão
 
 '''Ícone do botão de pausa'''
 icone_pausa = pygame.transform.scale(
     pygame.image.load(os.path.join(CAMINHO_BASE, "pausa.png")).convert_alpha(),
     (40, 40)
-)
+)   #carrega o ícone do botão de pausa (com fundo transparente) e escala para o tamanho do botão
 
-'''Geometria do obstáculo "passarinho" (pode ser evitado agachando ou pulando)'''
+'''Geometria do obstáculo "passarinho"'''
 PASSARINHO_ALTURA = 24
 PASSARINHO_LARGURA = 36
 PASSARINHO_Y = PISO - 56
 
-'''Overlay escuro usado na tela de Game Over'''
-overlay_game_over = pygame.Surface((LARGURA, ALTURA))
-overlay_game_over.set_alpha(150)
-overlay_game_over.fill(PRETO)
+'''Overlay escuro usado nas telas de início, pausa e game over'''
+overlay_escuro = pygame.Surface((LARGURA, ALTURA))
+overlay_escuro.set_alpha(200)
+overlay_escuro.fill(PRETO)
 
 '''Variáveis do Jogador'''
 jogador_x = 100
@@ -107,7 +109,7 @@ PULO_FORCA = -15
 VELOCIDADE_INICIAL = 5.0
 VELOCIDADE_MAX = 30.0
 INCREMENTO_POR_FAIXA = 0.5
-FAIXA_PONTOS = 1500
+FAIXA_PONTOS = 1500   #a cada 1500 pontos, a velocidade aumenta em 0.5, até o máximo de 30
 
 '''Margem para evitar que obstáculos de chão e trechos de água surjam sobrepostos'''
 MARGEM_SEGURANCA = 200
@@ -116,7 +118,7 @@ MARGEM_SEGURANCA = 200
 EXTRA_APOS_AGUA = 400
 
 '''Controle de FPS'''
-relogio = pygame.time.Clock()
+relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
 
 
 def alternar_tela_cheia():
@@ -124,7 +126,7 @@ def alternar_tela_cheia():
     tela_cheia = not tela_cheia
     if tela_cheia:
         display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        pygame.event.set_grab(True)
+        pygame.event.set_grab(True)   #garante que o mouse fique preso na janela em modo tela cheia
     else:
         display = pygame.display.set_mode((LARGURA, ALTURA))
         pygame.event.set_grab(False)
@@ -132,10 +134,11 @@ def alternar_tela_cheia():
 
 def escalar_mouse_para_jogo(pos):
     if tela_cheia:
-        escala_x = display.get_width() / LARGURA
+        escala_x = display.get_width() / LARGURA   
         escala_y = display.get_height() / ALTURA
         return (pos[0] / escala_x, pos[1] / escala_y)
-    return pos
+    else:
+        return pos
 
 
 def desenhar_botao_tela_cheia():
@@ -147,7 +150,7 @@ def desenhar_botao_pausa():
 
 
 def desenhar_tela_pausa():
-    tela.blit(overlay_game_over, (0, 0))
+    tela.blit(overlay_escuro, (0, 0))
     texto = fonte_titulo.render("PAUSADO", True, BRANCO)
     tela.blit(texto, texto.get_rect(center=(LARGURA // 2, ALTURA // 2)))
     desenhar_botao_pausa()
@@ -161,11 +164,11 @@ def hitbox_jogador():
 
 
 def hitbox_obstaculo(obs):
-    x, y = int(obs["x"]), obs["y"]                                    #caixas de colisão menores que o retângulo de desenho, acompanhando a
-    largura, altura = obs["largura"], obs["altura"]                    #forma visível de cada obstáculo (o espinho é um triângulo, por exemplo)
+    x, y = int(obs["x"]), obs["y"]      #caixas de colisão menores que o retângulo de desenho, acompanhando a forma visível do obstáculo
+    largura, altura = obs["largura"], obs["altura"]
     if obs["tipo"] == "espinho":
         return pygame.Rect(x + 5, y + 10, largura - 10, altura - 10)
-    elif obs["tipo"] == "bloco":
+    elif obs["tipo"] == "caixa":
         return pygame.Rect(x + 2, y + 2, largura - 4, altura - 4)
     else:  # passarinho
         return pygame.Rect(x + 4, y + 4, largura - 8, altura - 8)
@@ -179,10 +182,10 @@ def desenhar_jogador():
 
 
 def gerar_obstaculo(x):
-    tipo = random.choice(["espinho", "bloco", "passarinho"])
+    tipo = random.choice(["espinho", "caixa", "passarinho"])
     if tipo == "espinho":
         return {"tipo": tipo, "x": float(x), "y": PISO - 30, "largura": 30, "altura": 30}
-    elif tipo == "bloco":
+    elif tipo == "caixa":
         return {"tipo": tipo, "x": float(x), "y": PISO - 60, "largura": 36, "altura": 60}
     else:  # passarinho: voa na altura do tronco do jogador, pode ser evitado agachando ou pulando
         return {"tipo": tipo, "x": float(x), "y": PASSARINHO_Y, "largura": PASSARINHO_LARGURA, "altura": PASSARINHO_ALTURA}
@@ -200,7 +203,7 @@ def desenhar_obstaculo(obs):
             (x, y + altura), (x + largura / 2, y), (x + largura, y + altura)
         ])
 
-    elif obs["tipo"] == "bloco":
+    elif obs["tipo"] == "caixa":
         pygame.draw.rect(tela, CAIXA_MARROM_ESC, (x, y, largura, altura))
         pygame.draw.rect(tela, CAIXA_MARROM, (x + 3, y + 3, largura - 6, altura - 6))
         pygame.draw.line(tela, CAIXA_MARROM_ESC, (x + 3, y + 3), (x + largura - 3, y + altura - 3), 3)
@@ -208,7 +211,7 @@ def desenhar_obstaculo(obs):
         for canto in [(x + 5, y + 5), (x + largura - 5, y + 5), (x + 5, y + altura - 5), (x + largura - 5, y + altura - 5)]:
             pygame.draw.circle(tela, CAIXA_DETALHE, canto, 2)
 
-    else:  #passarinho: ave em pixel art - pode ser evitada agachando ou pulando
+    else:  #passarinho
         cy = y + altura // 2
 
         #cauda (penas traseiras, lado direito - sentido do voo)
@@ -252,11 +255,11 @@ def atualizar_velocidade(pontos):
     return min(VELOCIDADE_INICIAL + incrementos * INCREMENTO_POR_FAIXA, VELOCIDADE_MAX)
 
 
-def desenhar_camada_repetida(desenhar_tile, offset, tile_largura, y_base):
-    x = -offset
+def desenhar_camada_repetida(desenhar_tile, offset, tile_largura, y_base):   #desenha uma camada de fundo repetida em paralaxe
+    x = -offset   #começa com um offset negativo para criar o efeito de rolagem suave
     while x < LARGURA:
         desenhar_tile(x, y_base)
-        x += tile_largura
+        x += tile_largura   #desenha os tiles seguintes até preencher a largura da tela
 
 
 def desenhar_tile_castelo(x, y_base):
@@ -281,9 +284,11 @@ def desenhar_tile_castelo(x, y_base):
 
 def desenhar_tile_arvore(x, y_base):
     cx = x + 100
+    #tronco e sua sombra
     pygame.draw.rect(tela, TRONCO_MARROM, (cx - 10, y_base - 45, 20, 45))
     pygame.draw.rect(tela, TRONCO_MARROM_ESC, (cx + 6, y_base - 45, 4, 45))
 
+    #copa e sua soombra
     pygame.draw.rect(tela, COPA_VERDE_ESCURO, (cx - 30, y_base - 70, 60, 25))
     pygame.draw.rect(tela, COPA_VERDE_CLARO, (cx - 22, y_base - 78, 44, 25))
     pygame.draw.rect(tela, COPA_VERDE_ESCURO, (cx - 15, y_base - 95, 30, 22))
@@ -306,11 +311,13 @@ def desenhar_fundo():
 
 
 def desenhar_pontuacao():
+    #escrevendo o texto da pontuação
     texto_sombra = fonte_pontuacao.render(f"Pontos: {int(pontuacao)}", True, PRETO)
     tela.blit(texto_sombra, (11, 11))
     texto = fonte_pontuacao.render(f"Pontos: {int(pontuacao)}", True, BRANCO)
     tela.blit(texto, (10, 10))
 
+    #escrevendo o texto de velocidade
     vel_sombra = fonte_velocidade.render(f"Velocidade: {velocidade_jogo:.1f}", True, PRETO)
     tela.blit(vel_sombra, (11, 45))
     vel_texto = fonte_velocidade.render(f"Velocidade: {velocidade_jogo:.1f}", True, BRANCO)
@@ -319,7 +326,7 @@ def desenhar_pontuacao():
 
 def desenhar_tela_inicio():
     desenhar_fundo()
-    tela.blit(overlay_game_over, (0, 0))
+    tela.blit(overlay_escuro, (0, 0))
 
     titulo = fonte_titulo.render("Running Girl!", True, BRANCO)
     tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 100)))
@@ -341,7 +348,7 @@ def desenhar_tela_inicio():
 
 
 def desenhar_tela_game_over():
-    tela.blit(overlay_game_over, (0, 0))
+    tela.blit(overlay_escuro, (0, 0))
 
     titulo = fonte_titulo.render("GAME OVER", True, BRANCO)
     tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 40)))
@@ -505,7 +512,7 @@ while True:
             if jogador_rect.colliderect(hitbox_obstaculo(obs)):
                 estado_jogo = "game_over"
 
-        # Colisão com a água: game over apenas ao tocar a faixa azul na base da tela
+        '''Colisão com a água: game over apenas ao tocar a faixa azul na base da tela'''
         if jogador_rect.bottom >= ALTURA - ALTURA_AGUA:
             for seg in segmentos_agua:
                 if jogador_rect.right > seg["x"] and jogador_rect.left < seg["x"] + seg["largura"]:
