@@ -123,7 +123,7 @@ relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
 
 '''música e sons'''
 musica_fundo = pygame.mixer.music.load("Peritune_Dreambyte_loop.mp3")
-pygame.mixer.music.set_volume(0.3)
+pygame.mixer.music.set_volume(0.05)
 som_pulo = pygame.mixer.Sound("mario_jump.wav")
 som_pulo.set_volume(0.6)
 som_colisao = pygame.mixer.Sound("mario_gameover.wav")
