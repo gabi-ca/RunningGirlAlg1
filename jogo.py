@@ -29,6 +29,9 @@ AZULCEU = (91, 163, 252)
 VERDECHAO = (37, 227, 36)
 SOLO_MARROM = (101, 67, 33)
 AGUA_AZUL = (60, 140, 230)
+ROSA          = (255, 105, 180)
+DOURADO       = (255, 215,   0)
+VERMELHO_VIVO = (220,  20,  60)
 
 '''Paleta do castelo (reino encantado)'''
 CASTELO_LILAS = (180, 160, 220)
@@ -395,10 +398,10 @@ def desenhar_tela_inicio():
     desenhar_fundo()
     tela.blit(overlay_escuro, (0, 0))
 
-    titulo = fonte_titulo.render("Running Girl!", True, BRANCO)
+    titulo = fonte_titulo.render("Running Girl!", True, ROSA)
     tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 100)))
 
-    inicio_msg = fonte_texto.render("Pressione ESPAÇO para começar", True, BRANCO)
+    inicio_msg = fonte_texto.render("Pressione ESPAÇO para começar", True, DOURADO)
     tela.blit(inicio_msg, inicio_msg.get_rect(center=(LARGURA // 2, ALTURA // 2 - 50)))
 
     linhas = [
@@ -417,10 +420,10 @@ def desenhar_tela_inicio():
 def desenhar_tela_game_over():
     tela.blit(overlay_escuro, (0, 0))
 
-    titulo = fonte_titulo.render("GAME OVER", True, BRANCO)
+    titulo = fonte_titulo.render("GAME OVER", True, VERMELHO_VIVO)
     tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 40)))
 
-    pontos = fonte_texto.render(f"Pontuação final: {int(pontuacao)}", True, BRANCO)
+    pontos = fonte_texto.render(f"Pontuação final: {int(pontuacao)}", True, DOURADO)
     tela.blit(pontos, pontos.get_rect(center=(LARGURA // 2, ALTURA // 2 + 10)))
 
     instrucao = fonte_texto.render("Pressione R para reiniciar", True, BRANCO)
