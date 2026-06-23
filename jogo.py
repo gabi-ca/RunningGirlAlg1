@@ -106,7 +106,7 @@ overlay_escuro.set_alpha(200)
 overlay_escuro.fill(PRETO)
 
 
-'''Novos elementos — nuvem plataforma'''
+'''Nuvem plataforma'''
 NUVEM_LARGURA = 80
 NUVEM_ALTURA = 15                   #zona sólida de colisão
 NUVEM_Y = 185                       #topo da nuvem; exige salto duplo
@@ -135,11 +135,9 @@ relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
 musica_fundo = pygame.mixer.music.load("Peritune_Dreambyte_loop.mp3")
 pygame.mixer.music.set_volume(0.05)
 som_pulo = pygame.mixer.Sound("mario_jump.wav")
-som_pulo.set_volume(0.6)
+som_pulo.set_volume(0.1)
 som_colisao = pygame.mixer.Sound("mario_gameover.wav")
-som_colisao.set_volume(0.6)
-som_agachado = pygame.mixer.Sound("mario_bump.wav")
-som_agachado.set_volume(0.6)
+som_colisao.set_volume(0.3)
 
 def alternar_tela_cheia():
     global display, tela_cheia
@@ -433,8 +431,6 @@ def reiniciar_jogo():
 
     estado_jogo = "jogando"
 
-    pygame.mixer.music.play(-1)   #Inicia a música de fundo em loop contínuo
-
 
 '''Inicialização do estado do jogo'''
 reiniciar_jogo()
@@ -467,6 +463,7 @@ while True:
             if estado_jogo == "inicio":
                 if evento.key == pygame.K_SPACE:
                     reiniciar_jogo()
+                    pygame.mixer.music.play(-1)
             elif estado_jogo == "jogando":
                 if evento.key == pygame.K_SPACE and not esta_agachado:
                     if esta_no_chao:
@@ -481,15 +478,13 @@ while True:
             elif estado_jogo == "game_over":
                 if evento.key == pygame.K_r:
                     reiniciar_jogo()
+                    pygame.mixer.music.play(-1)
 
     if estado_jogo == "jogando":
 
         '''Agachar: seta para baixo ou tecla S, só funciona no chão'''
         teclas = pygame.key.get_pressed()
         esta_agachado = (teclas[pygame.K_DOWN] or teclas[pygame.K_s]) and esta_no_chao
-        esta_agachado_anterior = not esta_agachado   #para tocar o som de agachar apenas quando o jogador começa a agachar
-        if esta_agachado and not esta_agachado_anterior:
-            som_agachado.play()
 
         '''Lógica do Jogador (Gravidade)'''
         jogador_y_velocidade += gravidade
@@ -605,6 +600,9 @@ while True:
         for obs in obstaculos:
             if jogador_rect.colliderect(hitbox_obstaculo(obs)):
                 estado_jogo = "game_over"
+                som_colisao.play()
+                pygame.mixer.music.stop()
+                break
 
         '''Colisão com a água: game over apenas ao tocar a faixa azul na base da tela'''
         if jogador_rect.bottom >= ALTURA - ALTURA_AGUA:
