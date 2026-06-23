@@ -105,11 +105,6 @@ overlay_escuro = pygame.Surface((LARGURA, ALTURA))
 overlay_escuro.set_alpha(200)
 overlay_escuro.fill(PRETO)
 
-'''Novos elementos — bolha de proteção'''
-BOLHA_RAIO_COLETAR = 15
-BOLHA_Y_COLETAR = PISO - 100        #centro Y; acessível por pulo simples
-BOLHA_COR = (100, 180, 255)
-BOLHA_COR_BORDA = (60, 120, 200)
 
 '''Novos elementos — nuvem plataforma'''
 NUVEM_LARGURA = 80
@@ -280,23 +275,8 @@ def atualizar_velocidade(pontos):
     return min(VELOCIDADE_INICIAL + incrementos * INCREMENTO_POR_FAIXA, VELOCIDADE_MAX)
 
 
-def gerar_bolha_coletar(x):
-    return {"x": float(x), "y": BOLHA_Y_COLETAR}
-
-
 def gerar_nuvem(x):
     return {"x": float(x), "y": NUVEM_Y, "alpha": 220, "sumindo": False, "carregando": False, "timer": 0}
-
-
-def desenhar_bolha_coletar(bolha):
-    cx = int(bolha["x"]) + BOLHA_RAIO_COLETAR
-    cy = bolha["y"]
-    r = BOLHA_RAIO_COLETAR
-    surf = pygame.Surface((r * 2 + 4, r * 2 + 4), pygame.SRCALPHA)
-    pygame.draw.circle(surf, (100, 180, 255, 60),  (r + 2, r + 2), r)
-    pygame.draw.circle(surf, (60, 120, 200, 200),  (r + 2, r + 2), r, 2)
-    pygame.draw.circle(surf, (220, 240, 255, 140), (r - 3, 6), 4)
-    tela.blit(surf, (cx - r - 2, cy - r - 2))
 
 
 def desenhar_nuvem(nuvem):
@@ -308,31 +288,6 @@ def desenhar_nuvem(nuvem):
     pygame.draw.ellipse(s, (255, 255, 255, a), (55, 10, 35, 20))
     pygame.draw.ellipse(s, (240, 240, 255, a), (15,  8, 55, 20))
     tela.blit(s, (x - 10, y - 12))
-
-
-def desenhar_bolha_ativa():
-    if bolha_piscando and (bolha_timer_piscar // 4) % 2 == 1:
-        return
-    cx = int(jogador_x + SPRITE_TAM // 2)
-    cy = int(jogador_y + SPRITE_TAM // 2)
-    r = SPRITE_TAM // 2 + 12
-    surf = pygame.Surface((r * 2 + 6, r * 2 + 6), pygame.SRCALPHA)
-    pygame.draw.circle(surf, (100, 180, 255, 50),  (r + 3, r + 3), r)
-    pygame.draw.circle(surf, (60, 120, 200, 180),  (r + 3, r + 3), r, 3)
-    pygame.draw.circle(surf, (210, 235, 255, 130), (r - 6, 9), 6)
-    tela.blit(surf, (cx - r - 3, cy - r - 3))
-
-
-def desenhar_hud_bolha():
-    surf = pygame.Surface((22, 22), pygame.SRCALPHA)
-    pygame.draw.circle(surf, (100, 180, 255, 160), (11, 11), 10)
-    pygame.draw.circle(surf, (60, 120, 200, 220),  (11, 11), 10, 2)
-    pygame.draw.circle(surf, (220, 240, 255, 120), (6, 5), 3)
-    tela.blit(surf, (10, 68))
-    texto_s = fonte_velocidade.render(f"x{bolha_usos}", True, PRETO)
-    tela.blit(texto_s, (36, 70))
-    texto = fonte_velocidade.render(f"x{bolha_usos}", True, BRANCO)
-    tela.blit(texto, (35, 69))
 
 
 def desenhar_camada_repetida(desenhar_tile, offset, tile_largura, y_base):   #desenha uma camada de fundo repetida em paralaxe
@@ -453,8 +408,6 @@ def reiniciar_jogo():
     global scroll_arvores
     global scroll_castelos
     global estado_jogo
-    global bolhas_para_coletar, distancia_proxima_bolha
-    global bolha_ativa, bolha_usos, bolha_piscando, bolha_timer_piscar
     global nuvens, distancia_proxima_nuvem
 
     jogador_y = float(PISO - SPRITE_TAM)
@@ -468,14 +421,6 @@ def reiniciar_jogo():
 
     segmentos_agua = []
     distancia_proximo_agua = 700
-
-    bolhas_para_coletar = []
-    distancia_proxima_bolha = 3500
-
-    bolha_ativa = False
-    bolha_usos = 0
-    bolha_piscando = False
-    bolha_timer_piscar = 0
 
     nuvens = []
     distancia_proxima_nuvem = 1600
@@ -622,16 +567,6 @@ while True:
                 #Garante que o próximo obstáculo de chão não surja muito perto da água
                 distancia_proximo_obstaculo += EXTRA_APOS_AGUA
 
-        '''Lógica da bolha coletável'''
-        for b in bolhas_para_coletar:
-            b["x"] -= velocidade_jogo
-        bolhas_para_coletar[:] = [b for b in bolhas_para_coletar if b["x"] + BOLHA_RAIO_COLETAR * 2 > 0]
-
-        distancia_proxima_bolha -= velocidade_jogo
-        if distancia_proxima_bolha <= 0:
-            bolhas_para_coletar.append(gerar_bolha_coletar(LARGURA + BOLHA_RAIO_COLETAR))
-            distancia_proxima_bolha = random.randint(3000, 5500)
-
         '''Lógica das nuvens plataforma'''
         for n in nuvens:
             if n["carregando"]:
@@ -656,14 +591,6 @@ while True:
                 nuvens.append(gerar_nuvem(LARGURA))
                 distancia_proxima_nuvem = random.randint(1200, 2200)
 
-        '''Timer do piscar da bolha ativa'''
-        if bolha_piscando:
-            bolha_timer_piscar -= 1
-            if bolha_timer_piscar <= 0:
-                bolha_piscando = False
-                if bolha_usos <= 0:
-                    bolha_ativa = False
-
         '''Pontuação e dificuldade progressiva'''
         pontuacao += velocidade_jogo
         velocidade_jogo = atualizar_velocidade(pontuacao)
@@ -675,21 +602,9 @@ while True:
         '''Colisões'''
         jogador_rect = hitbox_jogador()
 
-        #obstáculos: bolha absorve até 2 hits
         for obs in obstaculos:
             if jogador_rect.colliderect(hitbox_obstaculo(obs)):
                 estado_jogo = "game_over"
-
-        #colisão com bolha coletável
-        for b in bolhas_para_coletar[:]:
-            b_rect = pygame.Rect(int(b["x"]), b["y"] - BOLHA_RAIO_COLETAR,
-                                 BOLHA_RAIO_COLETAR * 2, BOLHA_RAIO_COLETAR * 2)
-            if jogador_rect.colliderect(b_rect):
-                bolhas_para_coletar.remove(b)
-                bolha_ativa = True
-                bolha_usos = 2
-                bolha_piscando = False
-                bolha_timer_piscar = 0
 
         '''Colisão com a água: game over apenas ao tocar a faixa azul na base da tela'''
         if jogador_rect.bottom >= ALTURA - ALTURA_AGUA:
@@ -708,14 +623,8 @@ while True:
             desenhar_nuvem(nuvem)
         for obs in obstaculos:
             desenhar_obstaculo(obs)
-        for b in bolhas_para_coletar:
-            desenhar_bolha_coletar(b)
         desenhar_jogador()
-        if bolha_ativa:
-            desenhar_bolha_ativa()
         desenhar_pontuacao()
-        if bolha_ativa:
-            desenhar_hud_bolha()
 
         if estado_jogo == "game_over":
             desenhar_tela_game_over()
