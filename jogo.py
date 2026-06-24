@@ -372,6 +372,7 @@ def desenhar_tela_inicio():
         "ESPAÇO (2x): salto duplo",
         "SETA BAIXO / S: agachar",
         "F / F11: tela cheia",
+        "P: pausar"
     ]
     for i, linha in enumerate(linhas):
         texto = fonte_texto.render(linha, True, BRANCO)
