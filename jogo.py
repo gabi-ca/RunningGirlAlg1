@@ -128,9 +128,6 @@ MARGEM_SEGURANCA = 200
 '''Distância extra somada ao próximo obstáculo de chão logo após um trecho de água'''
 EXTRA_APOS_AGUA = 400
 
-'''Controle de FPS'''
-relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
-
 '''música e sons'''
 musica_fundo = pygame.mixer.music.load("Peritune_Dreambyte_loop.mp3")
 pygame.mixer.music.set_volume(0.05)
@@ -138,6 +135,9 @@ som_pulo = pygame.mixer.Sound("mario_jump.wav")
 som_pulo.set_volume(0.1)
 som_colisao = pygame.mixer.Sound("mario_gameover.wav")
 som_colisao.set_volume(0.3)
+
+'''Controle de FPS'''
+relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
 
 def alternar_tela_cheia():
     global display, tela_cheia
@@ -278,9 +278,9 @@ def gerar_nuvem(x):
 
 
 def desenhar_nuvem(nuvem):
-    x, y = int(nuvem["x"]), nuvem["y"]
-    a = int(nuvem["alpha"])
-    s = pygame.Surface((NUVEM_LARGURA + 20, 35), pygame.SRCALPHA)
+    x, y = int(nuvem["x"]), nuvem["y"]   #desenha a nuvem com transparência variável, usando uma superfície temporária para permitir o uso de alfa
+    a = int(nuvem["alpha"])   #transparência da nuvem
+    s = pygame.Surface((NUVEM_LARGURA + 20, 35), pygame.SRCALPHA)   #superfície temporária com canal alfa
     pygame.draw.ellipse(s, (255, 255, 255, a), (0,  12, 40, 22))
     pygame.draw.ellipse(s, (255, 255, 255, a), (20,  5, 50, 28))
     pygame.draw.ellipse(s, (255, 255, 255, a), (55, 10, 35, 20))
@@ -415,13 +415,13 @@ def reiniciar_jogo():
     esta_agachado = False
     pulo_duplo_usado = False
 
-    obstaculos = []
+    obstaculos = []   #lista de obstáculos ativos na tela
     distancia_proximo_obstaculo = 400
 
-    segmentos_agua = []
+    segmentos_agua = []   #lista de trechos de água ativos na tela
     distancia_proximo_agua = 700
 
-    nuvens = []
+    nuvens = []   #lista de nuvens plataforma ativas na tela
     distancia_proxima_nuvem = 1600
 
     velocidade_jogo = VELOCIDADE_INICIAL
@@ -445,7 +445,7 @@ while True:
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   #botão esquerdo do mouse
             pos_jogo = escalar_mouse_para_jogo(evento.pos)
             if estado_jogo in ("inicio", "game_over"):
                 if RECT_BOTAO_TELA_CHEIA.collidepoint(pos_jogo):
@@ -492,7 +492,7 @@ while True:
         jogador_y_velocidade += gravidade
         jogador_y += jogador_y_velocidade
 
-        #checar pouso em nuvem (antes do chão): snaps player ao topo da nuvem cada frame
+        '''checar pouso em nuvem (antes do chão): snaps player ao topo da nuvem cada frame'''
         em_nuvem = False
         if jogador_y_velocidade >= 0:
             for nuvem in nuvens:
@@ -510,7 +510,6 @@ while True:
                         nuvem["timer"] = 180
                     em_nuvem = True
                     break
-
         if not em_nuvem:
             if jogador_y >= PISO - SPRITE_TAM:
                 sobre_agua = any(
