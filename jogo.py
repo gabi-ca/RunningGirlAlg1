@@ -30,8 +30,8 @@ AZULCEU = (91, 163, 252)
 VERDECHAO = (37, 227, 36)
 SOLO_MARROM = (101, 67, 33)
 AGUA_AZUL = (60, 140, 230)
-ROSA          = (255, 105, 180)
-DOURADO       = (255, 215,   0)
+ROSA = (255, 105, 180)
+DOURADO = (255, 215,   0)
 VERMELHO_VIVO = (220,  20,  60)
 
 '''Paleta do castelo (reino encantado)'''
@@ -368,10 +368,10 @@ def desenhar_tela_inicio():
     tela.blit(inicio_msg, inicio_msg.get_rect(center=(LARGURA // 2, ALTURA // 2 - 50)))
 
     linhas = [
-        "ESPAÇO: pular espinhos e caixas",
-        "ESPAÇO (2x no ar): salto duplo para atravessar a água",
-        "SETA BAIXO / S ou ESPAÇO: agache ou pule para evitar o passarinho",
-        "F / F11: alternar tela cheia",
+        "ESPAÇO: pular",
+        "ESPAÇO (2x): salto duplo",
+        "SETA BAIXO / S: agachar",
+        "F / F11: tela cheia",
     ]
     for i, linha in enumerate(linhas):
         texto = fonte_texto.render(linha, True, BRANCO)
