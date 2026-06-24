@@ -586,7 +586,7 @@ while True:
                 distancia_proxima_nuvem = MARGEM_SEGURANCA
             else:
                 nuvens.append(gerar_nuvem(LARGURA))
-                distancia_proxima_nuvem = random.randint(1200, 2200)
+                distancia_proxima_nuvem = random.randint(2500, 4000)
 
         '''Pontuação e dificuldade progressiva'''
         pontuacao += velocidade_jogo
