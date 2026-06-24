@@ -477,6 +477,7 @@ while True:
                         som_pulo.play()
             elif estado_jogo == "game_over":
                 if evento.key == pygame.K_r:
+                    som_colisao.stop()
                     reiniciar_jogo()
                     pygame.mixer.music.play(-1)
 
@@ -512,7 +513,7 @@ while True:
         if not em_nuvem:
             if jogador_y >= PISO - SPRITE_TAM:
                 sobre_agua = any(
-                    seg["x"] < jogador_x + SPRITE_TAM and seg["x"] + seg["largura"] > jogador_x
+                    seg["x"] < jogador_x + SPRITE_TAM and seg["x"] + seg["largura"] > jogador_x + SPRITE_TAM
                     for seg in segmentos_agua
                 )
                 if not sobre_agua:
@@ -522,6 +523,7 @@ while True:
                     pulo_duplo_usado = False
                 else:
                     esta_no_chao = False
+                    pulo_duplo_usado = False
 
         '''Lógica dos Obstáculos: move, remove os que saíram da tela e cria novos'''
         for obs in obstaculos:
