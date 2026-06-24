@@ -1,3 +1,5 @@
+'''primeira parte do código: inicialização, configuração e variáveis globais'''
+
 import pygame    #biblioteca principal do jogo (motor grafico)
 import sys       #para lida com funções do sistema
 import random    #para gerar números aleatórios (obstáculos e espaçamento)
@@ -138,6 +140,8 @@ som_colisao.set_volume(0.3)
 
 '''Controle de FPS'''
 relogio = pygame.time.Clock() #objeto para controlar a taxa de quadros do jogo
+
+'''segunda parte do código: funções auxiliares'''
 
 def alternar_tela_cheia():
     global display, tela_cheia
@@ -437,14 +441,19 @@ def reiniciar_jogo():
 reiniciar_jogo()
 estado_jogo = "inicio"
 
+'''terceira parte do código: loop principal do jogo'''
 
 '''Loop Principal do Jogo'''
 while True:
     '''Eventos (Pulo, Reinício e Fechamento)'''
     for evento in pygame.event.get():
+
+        '''sair do jogo'''
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
+        '''cliques do mouse'''
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   #botão esquerdo do mouse
             pos_jogo = escalar_mouse_para_jogo(evento.pos)
             if estado_jogo in ("inicio", "game_over"):
@@ -453,6 +462,8 @@ while True:
             if estado_jogo in ("jogando", "pausado"):
                 if RECT_BOTAO_PAUSA.collidepoint(pos_jogo):
                     estado_jogo = "pausado" if estado_jogo == "jogando" else "jogando"
+
+        '''mais teclas de atalho'''
         if evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_f, pygame.K_F11):
                 alternar_tela_cheia()
@@ -494,28 +505,28 @@ while True:
 
         '''checar pouso em nuvem (antes do chão): snaps player ao topo da nuvem cada frame'''
         em_nuvem = False
-        if jogador_y_velocidade >= 0:
+        if jogador_y_velocidade >= 0:   #Verifica se o jogador está caindo ou parado
             for nuvem in nuvens:
                 if not nuvem["sumindo"] and (
-                        int(jogador_y) + SPRITE_TAM >= nuvem["y"] and
-                        int(jogador_y) + SPRITE_TAM <= nuvem["y"] + NUVEM_ALTURA + 8 and
-                        jogador_x + SPRITE_TAM - 6 > nuvem["x"] and
-                        jogador_x + 6 < nuvem["x"] + NUVEM_LARGURA):
-                    jogador_y = float(nuvem["y"] - SPRITE_TAM)
+                        int(jogador_y) + SPRITE_TAM >= nuvem["y"] and   #verifica se o jogador atingiu o topo da nuvem
+                        int(jogador_y) + SPRITE_TAM <= nuvem["y"] + NUVEM_ALTURA + 8 and   #verifica se o jogador não passou pela nuvem
+                        jogador_x + SPRITE_TAM - 6 > nuvem["x"] and    #verifica se o jogador está dentro da área de colisão da nuvem
+                        jogador_x + 6 < nuvem["x"] + NUVEM_LARGURA): #verificando se o jogador está dentro da área de colisão da nuvem
+                    jogador_y = float(nuvem["y"] - SPRITE_TAM)   #snap do jogador para o topo da nuvem
                     jogador_y_velocidade = 0
                     esta_no_chao = True
                     pulo_duplo_usado = False
-                    if not nuvem["carregando"]:
-                        nuvem["carregando"] = True
-                        nuvem["timer"] = 180
+                    if not nuvem["carregando"]:   #verifica se a nuvem ainda não está carregando para iniciar o timer de desaparecimento
+                        nuvem["carregando"] = True   #inicia o timer de desaparecimento da nuvem
+                        nuvem["timer"] = 180         #timer de desaparecimento
                     em_nuvem = True
-                    break
+                    break                            #como já encontrou uma nuvem, não precisa verificar as outras
         if not em_nuvem:
             if jogador_y >= PISO - SPRITE_TAM:
                 sobre_agua = any(
                     seg["x"] < jogador_x + SPRITE_TAM and seg["x"] + seg["largura"] > jogador_x + SPRITE_TAM
                     for seg in segmentos_agua
-                )
+                )  #verifica se o jogador está sobre um segmento de água
                 if not sobre_agua:
                     jogador_y = PISO - SPRITE_TAM
                     jogador_y_velocidade = 0
@@ -566,22 +577,22 @@ while True:
 
         '''Lógica das nuvens plataforma'''
         for n in nuvens:
-            if n["carregando"]:
+            if n["carregando"]:          #inicia o timer de desaparecimento da nuvem quando o jogador pousa sobre ela
                 n["timer"] -= 1
                 if n["timer"] <= 60:
                     n["sumindo"] = True
-            else:
+            else:                         #se o jogador não pousou sobre a nuvem, ela não desaparece
                 n["x"] -= velocidade_jogo
             if n["sumindo"]:
                 n["alpha"] = max(0, n["alpha"] - 4)
-        nuvens[:] = [n for n in nuvens if n["x"] + NUVEM_LARGURA > 0 and n["alpha"] > 0]
+        nuvens[:] = [n for n in nuvens if n["x"] + NUVEM_LARGURA > 0 and n["alpha"] > 0]  #remove nuvens que saíram da tela ou ficaram invisíveis
 
         distancia_proxima_nuvem -= velocidade_jogo
         if distancia_proxima_nuvem <= 0:
             sobre_agua_n = any(
                 s["x"] < LARGURA + MARGEM_SEGURANCA and s["x"] + s["largura"] > LARGURA - MARGEM_SEGURANCA
                 for s in segmentos_agua
-            )
+            )   
             if sobre_agua_n:
                 distancia_proxima_nuvem = MARGEM_SEGURANCA
             else:
@@ -604,7 +615,7 @@ while True:
                 estado_jogo = "game_over"
                 som_colisao.play()
                 pygame.mixer.music.stop()
-                break
+                break   #interrompe o loop de colisão para evitar múltiplos sons de colisão simultâneos
 
         '''Colisão com a água: game over apenas ao tocar a faixa azul na base da tela'''
         if jogador_rect.bottom >= ALTURA - ALTURA_AGUA:
